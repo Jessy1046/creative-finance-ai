@@ -1,0 +1,145 @@
+// Esquema preparado para la fase 2 (PostgreSQL + Prisma). Aún NO está conectado:
+// la versión actual guarda los datos en el navegador mediante src/store (PropertyRepository).
+// Para activarlo: instalar prisma y @prisma/client, definir DATABASE_URL y ejecutar `prisma migrate dev`.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  INSTRUCTOR
+  ESTUDIANTE
+  ANALISTA
+  INVITADO
+}
+
+enum Provenance {
+  VERIFICADO
+  USUARIO
+  ESTIMADO
+  SIMULADO
+}
+
+model User {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  name         String?
+  role         Role          @default(ESTUDIANTE)
+  createdAt    DateTime      @default(now())
+  properties   Property[]
+  progress     LessonProgress[]
+  negotiations Negotiation[]
+  auditLogs    AuditLog[]
+}
+
+model Property {
+  id           String   @id @default(cuid())
+  ownerId      String
+  owner        User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name         String
+  addressLine  String?
+  city         String?
+  state        String?  @db.VarChar(2)
+  zip          String?  @db.VarChar(10)
+  propertyType String
+  units        Int      @default(1)
+  saved        Boolean  @default(false)
+  caseId       String?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  fields       PropertyField[]
+  checklist    Json     @default("{}")
+
+  @@index([ownerId])
+}
+
+/// Cada dato numérico con su procedencia. Montos en centavos (BigInt); tasas como fracción decimal exacta.
+model PropertyField {
+  id         String     @id @default(cuid())
+  propertyId String
+  property   Property   @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  key        String
+  cents      BigInt?
+  rate       Decimal?   @db.Decimal(12, 8)
+  count      Int?
+  source     Provenance @default(USUARIO)
+  verifiedAt DateTime?
+  evidence   String?
+
+  @@unique([propertyId, key])
+}
+
+model Course {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  title     String
+  level     String
+  published Boolean  @default(false)
+  lessons   Lesson[]
+}
+
+model Lesson {
+  id        String   @id @default(cuid())
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  slug      String   @unique
+  title     String
+  content   Json
+  sources   Json
+  updatedAt DateTime @updatedAt
+  progress  LessonProgress[]
+}
+
+model LessonProgress {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId  String
+  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  completed Boolean  @default(false)
+  correct   Int      @default(0)
+  total     Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, lessonId])
+}
+
+model PracticeCase {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  title     String
+  data      Json
+  published Boolean  @default(false)
+  createdBy String?
+}
+
+model Negotiation {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  personaId  String
+  transcript Json
+  evaluation Json?
+  mode       String
+  createdAt  DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  String?
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+}

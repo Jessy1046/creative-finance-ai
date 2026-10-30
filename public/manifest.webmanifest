@@ -1,0 +1,11 @@
+{
+  "name": "Creative Finance AI by Latinos Creativos",
+  "short_name": "Creative Finance",
+  "description": "Academia, simulador y analista de financiamiento creativo.",
+  "lang": "es",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f7fa",
+  "theme_color": "#0b2350",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
